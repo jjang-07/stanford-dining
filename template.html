@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dining brief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --ink: #13171e;
+    --muted: #6d7582;
+    --faint: #a3aab5;
+    --line: #e2e5ea;
+    --card: #ffffff;
+    --cardinal: #8c1515;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--cardinal); outline-offset: 3px; border-radius: 6px; }
+
+  .page { max-width: 1160px; margin: 0 auto; padding: 56px 28px 72px; }
+
+  /* Header */
+  .kicker { color: var(--muted); font-size: 15px; margin: 0 0 10px; }
+  h1 {
+    font-size: clamp(36px, 6.4vw, 68px);
+    line-height: 1.02;
+    letter-spacing: -0.045em;
+    font-weight: 500;
+    margin: 0;
+  }
+
+  /* Controls */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px 32px; margin: 40px 0 0; }
+  .days { display: flex; gap: 4px; }
+  .day {
+    width: 44px; height: 56px; border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    color: var(--muted); transition: background .15s, color .15s;
+  }
+  .day .dow { font-size: 12px; }
+  .day .num { font-size: 17px; font-weight: 500; }
+  .day:hover { background: #eceef2; }
+  .day[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .day.today:not([aria-pressed="true"]) .num { color: var(--ink); }
+  .day.today .num::after {
+    content: ""; display: block; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--cardinal); margin: 2px auto 0;
+  }
+  .day[aria-pressed="true"].today .num::after { background: #fff; }
+
+  .meals { display: flex; gap: 26px; }
+  .meal { font-size: 18px; color: var(--faint); padding: 6px 0; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; font-weight: 500; }
+  .meal:hover { color: var(--muted); }
+  .meal[aria-selected="true"] { color: var(--ink); border-color: var(--ink); }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 0; align-items: center; }
+  .filters .lbl { color: var(--muted); font-size: 14px; margin-right: 4px; }
+  .chip {
+    font-size: 14px; padding: 6px 14px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); background: transparent;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .chip:hover { border-color: var(--faint); color: var(--ink); }
+  .chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* Halls */
+  .halls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 36px; align-items: start; }
+  .hall { background: var(--card); border-radius: 20px; padding: 24px 22px 12px; }
+  .hall-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 14px; }
+  .hall h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+  .count { font-size: 13px; color: var(--faint); white-space: nowrap; }
+  .none { color: var(--faint); padding: 14px 0 22px; margin: 0; border-top: 1px solid var(--line); font-size: 15px; }
+
+  .dishes { list-style: none; margin: 0; padding: 0; }
+  .dishes li { border-top: 1px solid var(--line); }
+  .dishes li:first-child { border-top: 0; }
+
+  .sec { margin-top: 6px; }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin: 0; padding: 14px 0 4px; font-size: 13px; font-weight: 500; color: var(--muted); text-align: left; }
+  .sec-head.toggle:hover { color: var(--ink); }
+  .sec-count { color: var(--faint); }
+  .sec + .sec { border-top: 1px solid var(--line); margin-top: 10px; }
+  .sec-main { background: var(--bg); border-radius: 14px; padding: 0 14px 4px; margin: 0 -6px 14px; border-top: 0 !important; }
+  .sec-main .sec-head { padding-top: 12px; color: var(--ink); }
+  .sec-main .dishes li { border-top-color: #e3e6eb; }
+  .sec-main .dishes li:first-child { border-top: 0; }
+  .sec-main .dish-name { font-size: 17.5px; font-weight: 600; letter-spacing: -0.01em; }
+
+  .highlights { margin-top: 32px; }
+  .hl-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .hl-title { font-size: 14px; font-weight: 500; color: var(--muted); margin: 0; }
+  .hl-toggle { font-size: 14px; padding: 7px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); transition: border-color .15s; }
+  .hl-toggle:hover { border-color: var(--faint); }
+  .hl-toggle[aria-expanded="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .hl-picker { margin: 12px 0 8px; padding: 20px 20px 12px; background: var(--card); border-radius: 18px; }
+  .hl-picker[hidden] { display: none; }
+  .pick-group { border: 0; margin: 0 0 16px; padding: 0; min-width: 0; }
+  .pick-group legend { font-size: 13px; color: var(--muted); padding: 0; margin-bottom: 9px; }
+  .pick-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pick { position: relative; display: flex; align-items: center; gap: 9px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font-size: 14.5px; transition: border-color .15s; user-select: none; }
+  .pick:hover { border-color: var(--faint); }
+  .pick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .pick .box { width: 17px; height: 17px; flex: none; border-radius: 5px; border: 1.5px solid #b7beca; display: grid; place-items: center; transition: background .15s, border-color .15s; }
+  .pick .box::after { content: ""; width: 9px; height: 5px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: translateY(-1px) rotate(-45deg) scale(0); transition: transform .12s; }
+  .pick.on { border-color: var(--ink); }
+  .pick.on .box { background: var(--ink); border-color: var(--ink); }
+  .pick.on .box::after { transform: translateY(-1px) rotate(-45deg) scale(1); }
+  .pick input:focus-visible ~ .box { outline: 2px solid var(--cardinal); outline-offset: 2px; }
+  .pick .pc { font-size: 12px; color: var(--faint); }
+  .pick-actions { display: flex; justify-content: flex-end; padding-bottom: 4px; }
+  .pick-actions button { font-size: 13px; color: var(--muted); padding: 4px 2px; }
+  .pick-actions button:hover { color: var(--ink); }
+  .hl-none { color: var(--muted); font-size: 15px; margin: 14px 0 0; }
+  .summary { margin: 22px 0 0; max-width: 780px; font-size: clamp(18px, 2.4vw, 22px); line-height: 1.4; letter-spacing: -0.012em; }
+  .summary b { font-weight: 600; }
+  .summary .dd { color: var(--muted); }
+  .summary .lead { display: block; }
+  .summary .next { display: block; margin-top: 6px; font-size: 16px; color: var(--muted); letter-spacing: 0; }
+  .hl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .hl-row:first-child { border-top: 0; }
+  #hlRows { margin-top: 6px; }
+  .hl-label { width: 120px; flex: none; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .hl-empty { color: var(--faint); font-size: 14px; }
+  .hl-note { flex-basis: 100%; margin: 2px 0 0 130px; color: var(--faint); font-size: 12.5px; max-width: 620px; }
+  .hl-chip { display: flex; flex-direction: column; text-align: left; font-size: 13.5px; line-height: 1.3; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); color: var(--muted); transition: border-color .15s, background .15s; max-width: 340px; }
+  .hl-chip b { font-weight: 600; color: var(--ink); }
+  .hl-chip .sd { color: var(--faint); font-size: 12.5px; }
+  .hl-chip:hover { border-color: var(--faint); }
+  .hl-chip.here { background: #f6e6e6; border-color: transparent; }
+  .hl-chip.here b { color: var(--cardinal); }
+  .hl-chip.here .sd { color: #8a5a5a; }
+  .hl-chip.guess { border-style: dashed; border-color: #c5cbd3; background: transparent; }
+  .hl-chip.guess.here { background: transparent; border-color: var(--cardinal); }
+  .dish { width: 100%; text-align: left; padding: 12px 0; display: block; }
+  .dish-name { font-size: 16px; font-weight: 500; line-height: 1.3; }
+  .dish:hover .dish-name { color: #000; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+  .tags { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 5px; margin-top: 6px; }
+  .tag { flex: none; white-space: nowrap; font-size: 11.5px; line-height: 1; padding: 4px 8px; border-radius: 999px; background: #eef0f3; color: #4b5360; }
+  .tag.vegan { background: #e4f0e6; color: #2d5a36; }
+  .tag.vegetarian { background: #eef0f3; color: #4b5360; }
+  .tag.hl { background: #f6e6e6; color: var(--cardinal); font-weight: 500; }
+  .hall-title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-width: 0; }
+  .tag.only { background: transparent; color: var(--cardinal); box-shadow: inset 0 0 0 1px rgba(140, 21, 21, .35); }
+  .detail { display: none; padding: 0 0 14px; font-size: 13.5px; color: var(--muted); }
+  .detail.open { display: block; }
+  .detail p { margin: 0 0 8px; }
+  .detail b { color: var(--ink); font-weight: 500; }
+
+  .foot { margin-top: 44px; color: var(--faint); font-size: 13px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .foot a { color: var(--muted); }
+
+  .empty-all { margin-top: 36px; color: var(--muted); font-size: 18px; }
+
+  @media (max-width: 1040px) { .halls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) {
+    .page { padding: 36px 18px 56px; }
+    .halls { grid-template-columns: 1fr; }
+    .controls { gap: 18px; }
+    .days { width: 100%; justify-content: space-between; }
+    .day { width: auto; flex: 1; }
+    .meals { gap: 20px; }
+    .hl-label { width: 100%; }
+    .hl-note { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <p class="kicker" id="kicker"></p>
+  <h1 id="title"></h1>
+  <p class="summary" id="summary" aria-live="polite"></p>
+
+  <div class="controls">
+    <div class="days" id="days" role="group" aria-label="Day"></div>
+    <div class="meals" id="meals" role="tablist" aria-label="Meal"></div>
+  </div>
+
+  <section class="highlights" aria-label="Highlights">
+    <div class="hl-head">
+      <h2 class="hl-title">Highlights this week</h2>
+      <button class="hl-toggle" id="hlToggle" aria-expanded="false" aria-controls="hlPicker"></button>
+    </div>
+    <div class="hl-picker" id="hlPicker" hidden></div>
+    <div id="hlRows"></div>
+  </section>
+
+  <div class="filters" id="filters" role="group" aria-label="Dietary filters"></div>
+
+  <div class="halls" id="halls" aria-live="polite"></div>
+
+  <div class="foot">
+    <span id="updated"></span>
+    <span>Menus from <a href="https://rdeapps.stanford.edu/dininghallmenu/">Stanford R&amp;DE</a>. Allergen details can change, so check at the hall.</span>
+  </div>
+</main>
+
+<script>
+const DATA = /*__DATA__*/null;
+const HL = Object.fromEntries(DATA.highlights.map(h => [h.id, h]));
+
+const TZ = "America/Los_Angeles";
+const MEAL_ORDER = ["Breakfast", "Brunch", "Lunch", "Dinner"];
+const FILTERS = [
+  { id: "unique", label: "Only here", test: d => d.unique },
+  { id: "vegan", label: "Vegan", test: d => d.tags.includes("vegan") },
+  { id: "vegetarian", label: "Vegetarian", test: d => d.tags.includes("vegetarian") || d.tags.includes("vegan") },
+  { id: "gf", label: "Gluten-free", test: d => d.tags.includes("gf") },
+  { id: "halal", label: "Halal", test: d => d.tags.includes("halal") },
+];
+const TAG_LABEL = { vegan: "vegan", vegetarian: "vegetarian", gf: "gluten-free", halal: "halal" };
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const $ = id => document.getElementById(id);
+
+// Current time in Pacific, independent of the visitor's timezone
+function pacificNow() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", hour12: false,
+  }).formatToParts(new Date());
+  const g = t => +parts.find(p => p.type === t).value;
+  return { key: `${g("month")}/${g("day")}/${g("year")}`, hour: g("hour") % 24 };
+}
+
+const parseDate = s => { const [m, d, y] = s.split("/").map(Number); return new Date(y, m - 1, d); };
+const mealsFor = day => MEAL_ORDER.filter(m => DATA.halls.some(h => (day.menus[h.id] || {})[m]));
+
+function defaultMeal(day, hour) {
+  const avail = mealsFor(day);
+  const pref = hour < 10 ? ["Breakfast", "Brunch", "Lunch", "Dinner"]
+             : hour < 14 ? ["Brunch", "Lunch", "Dinner"]
+             : ["Dinner", "Lunch", "Brunch"];
+  return pref.find(m => avail.includes(m)) || avail[0] || null;
+}
+
+const now = pacificNow();
+let dayIdx = Math.max(0, DATA.days.findIndex(d => d.date === now.key));
+const STORE_KEY = "diningHighlights.v1";
+const DEFAULT_PICKS = ["steak", "korean", "pho"];
+function loadPicks() {
+  try {
+    const v = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (Array.isArray(v)) return { ids: v.filter(id => HL[id]), saved: true };
+  } catch (e) {}
+  return { ids: DEFAULT_PICKS.filter(id => HL[id]), saved: false };
+}
+function savePicks() { try { localStorage.setItem(STORE_KEY, JSON.stringify([...state.selected])); } catch (e) {} }
+const picks = loadPicks();
+const state = { day: DATA.days[dayIdx], meal: null, filters: new Set(), open: new Set(), extras: new Set(),
+                selected: new Set(picks.ids), picker: !picks.saved };
+state.meal = defaultMeal(state.day, now.hour);
+
+function renderHeader() {
+  const dt = parseDate(state.day.date);
+  const isToday = state.day.date === now.key;
+  $("kicker").textContent = isToday ? "Today at your dining halls" : "Dining halls";
+  $("title").textContent = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+}
+
+function renderDays() {
+  $("days").innerHTML = DATA.days.map((d, i) => {
+    const dt = parseDate(d.date);
+    const sel = d === state.day;
+    return `<button class="day ${d.date === now.key ? "today" : ""}" data-i="${i}" aria-pressed="${sel}" aria-label="${dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}">
+      <span class="dow">${dt.toLocaleDateString("en-US", { weekday: "short" })}</span>
+      <span class="num">${dt.getDate()}</span></button>`;
+  }).join("");
+}
+
+function renderMeals() {
+  const avail = mealsFor(state.day);
+  $("meals").innerHTML = avail.map(m =>
+    `<button class="meal" role="tab" data-m="${m}" aria-selected="${m === state.meal}">${m}</button>`
+  ).join("");
+}
+
+function renderFilters() {
+  $("filters").innerHTML = `<span class="lbl">Show only</span>` + FILTERS.map(f =>
+    `<button class="chip" data-f="${f.id}" aria-pressed="${state.filters.has(f.id)}">${f.label}</button>`
+  ).join("");
+}
+
+// A dish is "unique" if no other hall in your list serves the same dish in this meal
+function markUnique() {
+  const counts = {};
+  DATA.halls.forEach(h => {
+    const seen = new Set(((state.day.menus[h.id] || {})[state.meal] || []).map(d => d.name.trim().toLowerCase()));
+    seen.forEach(n => { counts[n] = (counts[n] || 0) + 1; });
+  });
+  DATA.halls.forEach(h => ((state.day.menus[h.id] || {})[state.meal] || []).forEach(d => {
+    d.unique = counts[d.name.trim().toLowerCase()] === 1;
+  }));
+}
+
+function matches(d) {
+  return [...state.filters].every(id => FILTERS.find(f => f.id === id).test(d));
+}
+
+function dishHTML(hallId, d, i) {
+  const key = `${hallId}|${state.day.date}|${state.meal}|${i}`;
+  const open = state.open.has(key);
+  const diet = d.tags.includes("vegan") ? "vegan" : d.tags.includes("vegetarian") ? "vegetarian" : "";
+  const tags = (d.hl || []).filter(id => state.selected.has(id)).map(id => `<span class="tag hl">${esc(HL[id].tag)}</span>`).join("")
+             + (d.unique && !state.filters.has("unique") && DATA.halls.length > 1 ? `<span class="tag only">only here</span>` : "")
+             + (diet ? `<span class="tag ${diet}">${diet}</span>` : "");
+  const bits = [];
+  bits.push(`<p><b>Diet</b> ${d.tags.length ? d.tags.map(t => TAG_LABEL[t]).join(", ") : "no dietary tags"}</p>`);
+  if (d.description) bits.push(`<p>${esc(d.description)}</p>`);
+  if (d.ingredients) bits.push(`<p><b>Ingredients</b> ${esc(d.ingredients)}</p>`);
+  bits.push(`<p><b>Contains</b> ${d.allergens ? esc(d.allergens.toLowerCase()) : "none of the major allergens"}</p>`);
+  if (d.shared) bits.push(`<p><b>Shared equipment</b> ${esc(d.shared.toLowerCase())}</p>`);
+  return `<li>
+    <button class="dish" data-k="${esc(key)}" aria-expanded="${open}">
+      <span class="dish-name">${esc(d.name)}</span>
+      ${tags ? `<span class="tags">${tags}</span>` : ""}
+    </button>
+    <div class="detail ${open ? "open" : ""}">${bits.join("")}</div>
+  </li>`;
+}
+
+const SECTIONS = [
+  { id: "main", label: "Mains" },
+  { id: "protein", label: "More protein" },
+  { id: "veg", label: "Veggies" },
+  { id: "other", label: "Sides and extras" },
+];
+
+function renderHalls() {
+  if (!state.meal) { $("halls").innerHTML = ""; return; }
+  markUnique();
+  $("halls").innerHTML = DATA.halls.map(h => {
+    const all = (state.day.menus[h.id] || {})[state.meal] || [];
+    if (!all.length) {
+      return `<section class="hall"><div class="hall-head"><h2>${esc(h.name)}</h2></div>
+        <p class="none">Not serving ${state.meal.toLowerCase()}</p></section>`;
+    }
+    const shown = all.map((d, i) => ({ d, i })).filter(x => matches(x.d));
+    const count = state.filters.size ? `${shown.length} of ${all.length}` : "";
+    const hlIds = [...new Set(all.flatMap(d => d.hl || []))].filter(id => state.selected.has(id));
+    const body = !shown.length
+      ? `<p class="none">${state.filters.size === 1 && state.filters.has("unique") ? "Nothing exclusive to this hall" : "Nothing matches these filters"}</p>`
+      : SECTIONS.map(sec => {
+          const items = shown.filter(x => x.d.cat === sec.id);
+          if (!items.length) return "";
+          const collapsible = sec.id === "other" && !state.filters.size;
+          const key = `${h.id}|${state.day.date}|${state.meal}`;
+          const expanded = state.extras.has(key);
+          const list = collapsible && !expanded ? ""
+            : `<ul class="dishes">${items.map(x => dishHTML(h.id, x.d, x.i)).join("")}</ul>`;
+          const head = collapsible
+            ? `<button class="sec-head toggle" data-x="${esc(key)}" aria-expanded="${expanded}"><span>${sec.label}</span><span class="sec-count">${expanded ? "Hide" : "Show " + items.length}</span></button>`
+            : `<h3 class="sec-head">${sec.label}</h3>`;
+          return `<div class="sec sec-${sec.id}">${head}${list}</div>`;
+        }).join("");
+    return `<section class="hall"><div class="hall-head"><div class="hall-title"><h2>${esc(h.name)}</h2>${hlIds.map(id => `<span class="tag hl">${esc(HL[id].tag)}</span>`).join("")}</div>${count ? `<span class="count">${count}</span>` : ""}</div>${body}</section>`;
+  }).join("");
+}
+
+function highlightMatches(id) {
+  // One entry per day and meal, listing every hall that has it
+  const groups = new Map();
+  DATA.days.forEach((day, di) => MEAL_ORDER.forEach(m => DATA.halls.forEach(h => {
+    const dishes = ((day.menus[h.id] || {})[m] || []).filter(d => (d.hl || []).includes(id));
+    if (!dishes.length) return;
+    const key = `${di}|${m}`;
+    if (!groups.has(key)) groups.set(key, { di, meal: m, halls: [], dishes: [] });
+    const g = groups.get(key);
+    g.halls.push(h.name);
+    g.dishes.push(...dishes.map(d => d.name));
+  })));
+  return [...groups.values()];
+}
+
+const dayNameFor = (di, meal) => DATA.days[di].date === now.key ? (meal === "Dinner" ? "Tonight" : "Today") : parseDate(DATA.days[di].date).toLocaleDateString("en-US", { weekday: "short" });
+const weekdayLong = di => parseDate(DATA.days[di].date).toLocaleDateString("en-US", { weekday: "long" });
+const joinList = a => a.length < 2 ? (a[0] || "") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+const selectedList = () => DATA.highlights.filter(h => state.selected.has(h.id));
+
+function renderHighlights() {
+  if (!state.selected.size) {
+    $("hlRows").innerHTML = `<p class="hl-none">Nothing selected yet. Choose foods above and they'll show up here.</p>`;
+    return;
+  }
+  $("hlRows").innerHTML = selectedList().map(h => {
+    const hits = highlightMatches(h.id);
+    const guesses = DATA.unconfirmed.filter(u => u.id === h.id)
+      .map(u => ({ di: DATA.days.findIndex(d => d.date === u.date), hall: u.hall }));
+    const chips = hits.map(s => {
+      const uniq = [...new Set(s.dishes)];
+      const extra = uniq.length > 2 ? `, +${uniq.length - 2} more` : "";
+      const isTonight = DATA.days[s.di].date === now.key && s.meal === "Dinner";
+      return `<button class="hl-chip ${DATA.days[s.di] === state.day ? "here" : ""}" data-di="${s.di}" data-m="${s.meal}">
+        <span><b>${dayNameFor(s.di, s.meal)}${isTonight ? "" : " " + s.meal.toLowerCase()}</b> at ${esc(joinList(s.halls))}</span>
+        <span class="sd">${esc(uniq.slice(0, 2).join(", "))}${extra}</span></button>`;
+    }).join("") + guesses.map(g => `<button class="hl-chip guess ${DATA.days[g.di] === state.day ? "here" : ""}" data-di="${g.di}">
+        <span><b>${dayNameFor(g.di)}</b> at ${esc(g.hall)}</span><span class="sd">Usual day, unconfirmed</span></button>`).join("");
+    return `<div class="hl-row"><span class="hl-label">${esc(h.label)}</span>${chips || `<span class="hl-empty">None on the menu this week</span>`}
+      ${h.note ? `<p class="hl-note">${esc(h.note)}</p>` : ""}</div>`;
+  }).join("");
+}
+
+function pickCount(id) {
+  const days = new Set(highlightMatches(id).map(s => s.di)).size;
+  if (days) return { text: String(days), title: `${days} day${days > 1 ? "s" : ""} this week` };
+  const g = DATA.unconfirmed.filter(u => u.id === id).length;
+  return g ? { text: "~" + g, title: `${g} likely day${g > 1 ? "s" : ""}, not confirmed` } : { text: "0", title: "Not on the menu this week" };
+}
+
+function renderPicker() {
+  const groups = {};
+  DATA.highlights.forEach(h => (groups[h.group] = groups[h.group] || []).push(h));
+  $("hlPicker").innerHTML = Object.entries(groups).map(([g, items]) =>
+    `<fieldset class="pick-group"><legend>${esc(g)}</legend><div class="pick-grid">${items.map(h => {
+      const on = state.selected.has(h.id), c = pickCount(h.id);
+      return `<label class="pick ${on ? "on" : ""}"><input type="checkbox" value="${h.id}" ${on ? "checked" : ""}>
+        <span class="box" aria-hidden="true"></span><span class="pl">${esc(h.label)}</span><span class="pc" title="${c.title}">${c.text}</span></label>`;
+    }).join("")}</div></fieldset>`).join("")
+    + `<div class="pick-actions"><button type="button" id="hlClear">Clear all</button></div>`;
+}
+
+function renderToggle() {
+  const n = state.selected.size;
+  $("hlToggle").textContent = state.picker ? "Done" : (n ? `Choose foods (${n})` : "Choose foods");
+  $("hlToggle").setAttribute("aria-expanded", state.picker);
+  $("hlPicker").hidden = !state.picker;
+}
+
+// ---- Summary sentence, based on the foods the visitor picked
+const mealWord = (m, di) => (DATA.days[di].date === now.key && m === "Dinner") ? "tonight" : "for " + m.toLowerCase();
+
+function dayClauses(di) {
+  const out = [];
+  selectedList().forEach(h => {
+    const byMeal = new Map();
+    MEAL_ORDER.forEach(m => DATA.halls.forEach(hall => {
+      const dishes = ((DATA.days[di].menus[hall.id] || {})[m] || []).filter(d => (d.hl || []).includes(h.id));
+      if (!dishes.length) return;
+      if (!byMeal.has(m)) byMeal.set(m, { halls: [], dishes: [] });
+      const e = byMeal.get(m);
+      e.halls.push(hall.name);
+      e.dishes.push(...dishes.map(d => d.name));
+    }));
+    if (byMeal.size) out.push({ h, byMeal });
+  });
+  return out;
+}
+
+function clauseHTML(c, di, withDishes) {
+  const parts = [...c.byMeal].map(([m, e]) => `${esc(joinList(e.halls))} ${mealWord(m, di)}`);
+  let detail = "";
+  if (withDishes) {
+    const dishes = [...new Set([...c.byMeal.values()].flatMap(e => e.dishes))].map(n => n.replace(/\s*\([^)]*\)/g, ""));
+    if (!(dishes.length === 1 && dishes[0].toLowerCase() === c.h.short.toLowerCase())) {
+      const shown = dishes.slice(0, 2);
+      const rest = dishes.length - shown.length;
+      detail = ` <span class="dd">with ${esc(joinList(shown))}${rest > 0 ? `, plus ${rest} more` : ""}</span>`;
+    }
+  }
+  return `<b>${esc(c.h.short)}</b> at ${parts.join(", and at ")}${detail}`;
+}
+
+function renderSummary() {
+  const el = $("summary");
+  if (!state.selected.size) {
+    el.innerHTML = `<span class="lead">Choose the foods you love and this line will tell you where they're showing up.</span>`;
+    return;
+  }
+  const di = DATA.days.indexOf(state.day);
+  const isToday = state.day.date === now.key;
+  const when = isToday ? "today" : "on " + weekdayLong(di);
+  const clauses = dayClauses(di);
+  const guesses = DATA.unconfirmed.filter(u => u.date === state.day.date && state.selected.has(u.id) && !clauses.some(c => c.h.id === u.id));
+  const withDishes = clauses.length + guesses.length <= 2;
+  const items = clauses.slice(0, 3).map(c => clauseHTML(c, di, withDishes))
+    .concat(guesses.map(g => `<b>${esc(HL[g.id].short)}</b> may be at ${esc(g.hall)} <span class="dd">(usual day, unconfirmed)</span>`));
+  const more = clauses.length > 3 ? `; plus ${clauses.length - 3} more below` : "";
+  const lead = items.length
+    ? `${isToday ? "Today" : weekdayLong(di)}: ${items.join("; ")}${more}.`
+    : `Nothing from your highlights ${when}.`;
+
+  let next = "";
+  for (let k = di + 1; k < DATA.days.length && !next; k++) {
+    const cs = dayClauses(k);
+    if (!cs.length) continue;
+    const c = cs[0], [m, e] = [...c.byMeal][0];
+    next = `Next up: ${esc(c.h.short)} at ${esc(joinList(e.halls))} on ${weekdayLong(k)} ${mealWord(m, k)}.`;
+  }
+  el.innerHTML = `<span class="lead">${lead}</span>${next ? `<span class="next">${next}</span>` : ""}`;
+}
+
+function renderUpdated() {
+  const g = new Date(DATA.generated);
+  $("updated").textContent = "Updated " + g.toLocaleString("en-US", {
+    timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit",
+  }).replace(",", "") + " Pacific";
+}
+
+function renderAll() { renderHeader(); renderSummary(); renderDays(); renderMeals(); renderFilters(); renderHighlights(); renderHalls(); }
+
+document.addEventListener("change", e => {
+  const cb = e.target.closest(".pick input");
+  if (!cb) return;
+  cb.checked ? state.selected.add(cb.value) : state.selected.delete(cb.value);
+  cb.closest(".pick").classList.toggle("on", cb.checked);
+  savePicks(); renderToggle(); renderSummary(); renderHighlights(); renderHalls();
+});
+
+document.addEventListener("click", e => {
+  if (e.target.closest("#hlToggle")) { state.picker = !state.picker; return renderToggle(); }
+  if (e.target.closest("#hlClear")) {
+    state.selected.clear(); savePicks(); renderPicker(); renderToggle(); renderSummary(); renderHighlights(); return renderHalls();
+  }
+  const sc = e.target.closest(".hl-chip");
+  if (sc) {
+    state.day = DATA.days[+sc.dataset.di];
+    const avail = mealsFor(state.day);
+    state.meal = sc.dataset.m && avail.includes(sc.dataset.m) ? sc.dataset.m : (avail.includes(state.meal) ? state.meal : defaultMeal(state.day, now.hour));
+    return renderAll();
+  }
+  const ex = e.target.closest(".sec-head.toggle");
+  if (ex) { const k = ex.dataset.x; state.extras.has(k) ? state.extras.delete(k) : state.extras.add(k); return renderHalls(); }
+  const day = e.target.closest(".day");
+  if (day) {
+    state.day = DATA.days[+day.dataset.i];
+    if (!mealsFor(state.day).includes(state.meal)) state.meal = defaultMeal(state.day, now.hour);
+    return renderAll();
+  }
+  const meal = e.target.closest(".meal");
+  if (meal) { state.meal = meal.dataset.m; renderMeals(); return renderHalls(); }
+  const chip = e.target.closest(".chip");
+  if (chip) {
+    const id = chip.dataset.f;
+    state.filters.has(id) ? state.filters.delete(id) : state.filters.add(id);
+    renderFilters(); return renderHalls();
+  }
+  const dish = e.target.closest(".dish");
+  if (dish) {
+    const k = dish.dataset.k;
+    const open = !state.open.has(k);
+    open ? state.open.add(k) : state.open.delete(k);
+    dish.setAttribute("aria-expanded", open);
+    dish.nextElementSibling.classList.toggle("open", open);
+  }
+});
+
+renderPicker();
+renderToggle();
+renderAll();
+renderUpdated();
+</script>
+</body>
+</html>

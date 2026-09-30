@@ -1,0 +1,45 @@
+name: Daily dining brief
+
+on:
+  schedule:
+    # 12:30 UTC = 5:30 am Pacific (PDT) / 4:30 am (PST).
+    # Early on purpose: GitHub's scheduler can run late, and this keeps the page ready before 7 am.
+    - cron: "30 12 * * *"
+  workflow_dispatch: {}   # adds a "Run workflow" button so you can refresh on demand
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python scrape.py
+      - run: python render.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
