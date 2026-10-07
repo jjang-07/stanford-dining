@@ -16,7 +16,7 @@ MEAT = rx([
     "ribs?\\b", "short rib", "steak", "sirloin", "ribeye", "tri-?tip", "filet", "flank", "carne", "carnitas", "al pastor",
     "gyro", "kebab", "pepperoni", "hot dog", "wings?\\b", "cutlet", "fish", "cod\\b", "salmon", "tuna", "tilapia", "halibut",
     "shrimp", "prawn", "crab", "scallop", "seafood", "cioppino", "mahi", "trout", "catfish", "snapper", "sea bass", "clam",
-    "mussel", "calamari", "oyster", "lobster", "pot roast", "meatloaf", "schnitzel", "burger", "oxtail",
+    "mussel", "calamari", "oyster", "lobster", "pot roast", "meatloaf", "schnitzel", "burger", "oxtail", "magnolia boil",
 ])
 PLANT_PROTEIN = rx(["tofu", "tempeh", "seitan", "impossible", "beyond", "plant-based", "falafel"])
 EVERYDAY_PROTEIN = rx(["egg(?!plant| roll)", "legume", "(?<!green )(?<!string )beans?\\b", "lentil", "chickpea", "hummus", "edamame", "grilled vegan", "protein"])
@@ -81,4 +81,5 @@ def categorize(data):
                     else:
                         cat = "other"
                     d["cat"] = cat
+                    d["staple"] = is_staple
     return data

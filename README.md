@@ -39,6 +39,22 @@ highlights point at specials.
 Pho is a special case: Wilbur's pho station doesn't appear on Stanford's menu site, so the page can't confirm it.
 It shows dashed "unconfirmed" days based on the Mon, Wed, Fri schedule reported in fall 2025, which may change.
 
+## Nutrition estimates
+
+Stanford's menu site publishes no calories or macros, so the page can estimate them. The **Nutrition estimates**
+button is off by default. When on, each dish shows estimated protein (and calories, which can be hidden with the
+"Show calories" button), each hall gets a **Best picks** panel (highest protein per calorie, with fried and creamy
+dishes nudged down, plus a plant-based pick and a veggie to pair with), a "20 g+ protein" filter appears, and the
+summary line names a top protein pick for the meal.
+
+These are rough guesses for one typical serving, worked out from dish names by the rules in `nutrition.py`. They are
+good for comparing options, not for tracking intake. Build-your-own stations and bars are left out of the picks
+because what you put on your plate varies too much.
+
+New dishes appear every week. If a dish doesn't match any rule it shows no number (rather than a made-up one), and
+`render.py` prints the names in the workflow log. To fix one, add a line to `RULES` in `nutrition.py`:
+`(R(r"dish name pattern"), (calories, protein_g, fat_g, carbs_g))`. Specific rules go above general ones.
+
 ## Change the halls
 
 Edit `HALLS` at the top of `scrape.py`. Available values:

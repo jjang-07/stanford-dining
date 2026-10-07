@@ -123,6 +123,24 @@
   .pick-actions { display: flex; justify-content: flex-end; padding-bottom: 4px; }
   .pick-actions button { font-size: 13px; color: var(--muted); padding: 4px 2px; }
   .pick-actions button:hover { color: var(--ink); }
+  .nutrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 0; }
+  .nutrow .nut-note { flex: 0 0 100%; margin: 4px 0 0; color: var(--faint); font-size: 12.5px; }
+  .nutrow .nut-note span { display: block; max-width: 640px; }
+  .nutrow .nut-note a { color: var(--muted); }
+  .nut { display: block; margin-top: 3px; font-size: 13px; color: var(--muted); }
+  .nut b { color: var(--ink); font-weight: 600; }
+  .sec-main .nut { font-size: 13.5px; }
+  .best { border: 1px solid var(--line); border-radius: 14px; padding: 0 14px 12px; margin: 4px -6px 14px; }
+  .best .sec-head { color: var(--ink); padding-top: 12px; }
+  .best-list { list-style: none; margin: 0; padding: 0; }
+  .best-list li { padding: 8px 0; border-top: 1px solid var(--line); font-size: 15px; }
+  .best-list li:first-child { border-top: 0; }
+  .best-list .bn { font-weight: 500; min-width: 0; }
+  .best-list .bv { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; }
+  .best-list .bv b { color: var(--ink); font-weight: 600; }
+  .best-list .bt { margin-left: 6px; font-size: 11px; color: #2d5a36; background: #e4f0e6; padding: 2px 7px; border-radius: 999px; font-weight: 400; }
+  .best-pair { margin: 8px 0 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+  .best-pair b { color: var(--ink); font-weight: 500; }
   .hl-none { color: var(--muted); font-size: 15px; margin: 14px 0 0; }
   .summary { margin: 22px 0 0; max-width: 780px; font-size: clamp(18px, 2.4vw, 22px); line-height: 1.4; letter-spacing: -0.012em; }
   .summary b { font-weight: 600; }
@@ -199,6 +217,7 @@
   </section>
 
   <div class="filters" id="filters" role="group" aria-label="Dietary filters"></div>
+  <div class="nutrow" id="nutrow" role="group" aria-label="Nutrition estimates"></div>
 
   <div class="halls" id="halls" aria-live="polite"></div>
 
@@ -258,9 +277,15 @@ function loadPicks() {
   return { ids: DEFAULT_PICKS.filter(id => HL[id]), saved: false };
 }
 function savePicks() { try { localStorage.setItem(STORE_KEY, JSON.stringify([...state.selected])); } catch (e) {} }
+const NUT_KEY = "diningNutrition.v1";
+function loadNut() {
+  try { const v = JSON.parse(localStorage.getItem(NUT_KEY)); if (v && typeof v === "object") return { on: !!v.on, cals: v.cals !== false, high: !!v.high }; } catch (e) {}
+  return { on: false, cals: true, high: false };
+}
+function saveNut() { try { localStorage.setItem(NUT_KEY, JSON.stringify(state.nut)); } catch (e) {} }
 const picks = loadPicks();
 const state = { day: DATA.days[dayIdx], meal: null, filters: new Set(), open: new Set(), extras: new Set(),
-                selected: new Set(picks.ids), picker: !picks.saved };
+                selected: new Set(picks.ids), picker: !picks.saved, nut: loadNut() };
 state.meal = defaultMeal(state.day, now.hour);
 
 function renderHeader() {
@@ -287,6 +312,17 @@ function renderMeals() {
   ).join("");
 }
 
+function renderNutRow() {
+  const n = state.nut;
+  let html = `<button class="chip" data-n="on" aria-pressed="${n.on}">Nutrition estimates</button>`;
+  if (n.on) {
+    html += `<button class="chip" data-n="high" aria-pressed="${n.high}">${proteinThr()} g+ protein</button>`
+         + `<button class="chip" data-n="cals" aria-pressed="${n.cals}">Show calories</button>`
+         + `<p class="nut-note"><span>Rough estimates for one typical serving, worked out from dish names. Stanford doesn't publish nutrition for these menus, so treat these as a way to compare options, not exact numbers. Questions about food and nutrition: <a href="mailto:nutritionist@stanford.edu">nutritionist@stanford.edu</a>.</span></p>`;
+  }
+  $("nutrow").innerHTML = html;
+}
+
 function renderFilters() {
   $("filters").innerHTML = `<span class="lbl">Show only</span>` + FILTERS.map(f =>
     `<button class="chip" data-f="${f.id}" aria-pressed="${state.filters.has(f.id)}">${f.label}</button>`
@@ -305,8 +341,44 @@ function markUnique() {
   }));
 }
 
+const MIN_SCORE = 5;  // grams of protein per 100 kcal (after nudging fried/creamy dishes down)
+const isBreakfast = () => state.meal === "Breakfast" || state.meal === "Brunch";
+const proteinThr = () => isBreakfast() ? 12 : 20;
+const filtering = () => state.filters.size > 0 || (state.nut.on && state.nut.high);
+
 function matches(d) {
+  if (state.nut.on && state.nut.high && !(d.n && d.n[1] >= proteinThr())) return false;
   return [...state.filters].every(id => FILTERS.find(f => f.id === id).test(d));
+}
+
+const nutLine = d => d.n
+  ? `<span class="nut"><b>≈${d.n[1]} g</b> protein${state.nut.cals ? `, ≈${d.n[0]} cal` : ""}</span>` : "";
+
+// "Best picks": estimated protein per calorie, with fried, creamy, and fatty dishes nudged down
+function bestPicks(items) {
+  const thr = isBreakfast() ? 10 : 15;
+  const seen = new Map();
+  items.forEach(x => {
+    const d = x.d;
+    if (!d.n || d.station || d.n[1] < thr || d.score < MIN_SCORE) return;
+    if (!(d.cat === "main" || d.cat === "protein" || d.n[1] >= 20)) return;
+    if (!seen.has(d.name)) seen.set(d.name, x);
+  });
+  const ranked = [...seen.values()].sort((a, b) => b.d.score - a.d.score);
+  const top = ranked.slice(0, 3);
+  const plant = ranked.find(x => !top.includes(x) && (x.d.tags.includes("vegan") || x.d.tags.includes("vegetarian")));
+  const veg = items.filter(x => x.d.cat === "veg" && x.d.n && x.d.n[0] <= 150 && !x.d.heavy)
+    .sort((a, b) => (a.d.staple - b.d.staple) || (b.d.n[1] - a.d.n[1]) || (a.d.n[0] - b.d.n[0]))[0];
+  return { top, plant, veg };
+}
+
+function bestHTML(items) {
+  const { top, plant, veg } = bestPicks(items);
+  if (!top.length) return "";
+  const row = (x, tag) => `<li><span class="bn">${esc(x.d.name)}${tag ? `<span class="bt">${tag}</span>` : ""}</span>
+    <span class="bv"><b>≈${x.d.n[1]} g</b> protein${state.nut.cals ? `, ≈${x.d.n[0]} cal` : ""}</span></li>`;
+  const pair = veg ? `<p class="best-pair">Pair with <b>${esc(veg.d.name)}</b>${state.nut.cals ? ` (≈${veg.d.n[0]} cal)` : ""}</p>` : "";
+  return `<div class="sec best"><h3 class="sec-head">Best picks</h3><ul class="best-list">${top.map(x => row(x)).join("")}${plant ? row(plant, "plant-based") : ""}</ul>${pair}</div>`;
 }
 
 function dishHTML(hallId, d, i) {
@@ -318,6 +390,7 @@ function dishHTML(hallId, d, i) {
              + (diet ? `<span class="tag ${diet}">${diet}</span>` : "");
   const bits = [];
   bits.push(`<p><b>Diet</b> ${d.tags.length ? d.tags.map(t => TAG_LABEL[t]).join(", ") : "no dietary tags"}</p>`);
+  if (state.nut.on && d.n) bits.push(`<p><b>Estimate per serving</b> ${state.nut.cals ? `${d.n[0]} cal, ` : ""}${d.n[1]} g protein, ${d.n[2]} g fat, ${d.n[3]} g carbs. Rough guess from the dish name and a typical portion.</p>`);
   if (d.description) bits.push(`<p>${esc(d.description)}</p>`);
   if (d.ingredients) bits.push(`<p><b>Ingredients</b> ${esc(d.ingredients)}</p>`);
   bits.push(`<p><b>Contains</b> ${d.allergens ? esc(d.allergens.toLowerCase()) : "none of the major allergens"}</p>`);
@@ -325,6 +398,7 @@ function dishHTML(hallId, d, i) {
   return `<li>
     <button class="dish" data-k="${esc(key)}" aria-expanded="${open}">
       <span class="dish-name">${esc(d.name)}</span>
+      ${state.nut.on ? nutLine(d) : ""}
       ${tags ? `<span class="tags">${tags}</span>` : ""}
     </button>
     <div class="detail ${open ? "open" : ""}">${bits.join("")}</div>
@@ -348,14 +422,14 @@ function renderHalls() {
         <p class="none">Not serving ${state.meal.toLowerCase()}</p></section>`;
     }
     const shown = all.map((d, i) => ({ d, i })).filter(x => matches(x.d));
-    const count = state.filters.size ? `${shown.length} of ${all.length}` : "";
+    const count = filtering() ? `${shown.length} of ${all.length}` : "";
     const hlIds = [...new Set(all.flatMap(d => d.hl || []))].filter(id => state.selected.has(id));
     const body = !shown.length
       ? `<p class="none">${state.filters.size === 1 && state.filters.has("unique") ? "Nothing exclusive to this hall" : "Nothing matches these filters"}</p>`
-      : SECTIONS.map(sec => {
+      : (state.nut.on ? bestHTML(shown) : "") + SECTIONS.map(sec => {
           const items = shown.filter(x => x.d.cat === sec.id);
           if (!items.length) return "";
-          const collapsible = sec.id === "other" && !state.filters.size;
+          const collapsible = sec.id === "other" && !filtering();
           const key = `${h.id}|${state.day.date}|${state.meal}`;
           const expanded = state.extras.has(key);
           const list = collapsible && !expanded ? ""
@@ -498,7 +572,22 @@ function renderSummary() {
     const c = cs[0], [m, e] = [...c.byMeal][0];
     next = `Next up: ${esc(c.h.short)} at ${esc(joinList(e.halls))} on ${weekdayLong(k)} ${mealWord(m, k)}.`;
   }
-  el.innerHTML = `<span class="lead">${lead}</span>${next ? `<span class="next">${next}</span>` : ""}`;
+  el.innerHTML = `<span class="lead">${lead}</span>${next ? `<span class="next">${next}</span>` : ""}${topProteinLine()}`;
+}
+
+function topProteinLine() {
+  if (!state.nut.on || !state.meal) return "";
+  const thr = isBreakfast() ? 10 : 20;
+  const byName = new Map();
+  DATA.halls.forEach(h => ((state.day.menus[h.id] || {})[state.meal] || []).forEach(d => {
+    if (!d.n || d.staple || d.station || d.score < MIN_SCORE || d.n[1] < thr || !(d.cat === "main" || d.cat === "protein")) return;
+    if (!byName.has(d.name)) byName.set(d.name, { d, halls: [] });
+    byName.get(d.name).halls.push(h.name);
+  }));
+  const best = [...byName.values()].sort((a, b) => b.d.score - a.d.score)[0];
+  if (!best) return "";
+  const cal = state.nut.cals ? `, ≈${best.d.n[0]} cal` : "";
+  return `<span class="next">Top protein pick for ${state.meal.toLowerCase()}: <b>${esc(best.d.name)}</b> at ${esc(joinList(best.halls))} (≈${best.d.n[1]} g protein${cal}).</span>`;
 }
 
 function renderUpdated() {
@@ -508,7 +597,7 @@ function renderUpdated() {
   }).replace(",", "") + " Pacific";
 }
 
-function renderAll() { renderHeader(); renderSummary(); renderDays(); renderMeals(); renderFilters(); renderHighlights(); renderHalls(); }
+function renderAll() { renderHeader(); renderSummary(); renderDays(); renderMeals(); renderFilters(); renderNutRow(); renderHighlights(); renderHalls(); }
 
 document.addEventListener("change", e => {
   const cb = e.target.closest(".pick input");
@@ -519,6 +608,12 @@ document.addEventListener("change", e => {
 });
 
 document.addEventListener("click", e => {
+  const nb = e.target.closest("[data-n]");
+  if (nb) {
+    const k = nb.dataset.n;
+    state.nut[k] = !state.nut[k];
+    saveNut(); renderNutRow(); renderSummary(); return renderHalls();
+  }
   if (e.target.closest("#hlToggle")) { state.picker = !state.picker; return renderToggle(); }
   if (e.target.closest("#hlClear")) {
     state.selected.clear(); savePicks(); renderPicker(); renderToggle(); renderSummary(); renderHighlights(); return renderHalls();
@@ -539,7 +634,7 @@ document.addEventListener("click", e => {
     return renderAll();
   }
   const meal = e.target.closest(".meal");
-  if (meal) { state.meal = meal.dataset.m; renderMeals(); return renderHalls(); }
+  if (meal) { state.meal = meal.dataset.m; renderMeals(); renderNutRow(); renderSummary(); return renderHalls(); }
   const chip = e.target.closest(".chip");
   if (chip) {
     const id = chip.dataset.f;
