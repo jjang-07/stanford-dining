@@ -76,6 +76,17 @@
   .chip:hover { border-color: var(--faint); color: var(--ink); }
   .chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
 
+  /* Hall picker */
+  .hallpick { position: relative; margin-top: 24px; display: inline-block; }
+  .hp-btn { font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink); background: transparent; }
+  .hp-btn:hover { border-color: var(--faint); }
+  .hp-panel { position: absolute; z-index: 10; top: calc(100% + 6px); left: 0; min-width: 240px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 6px; box-shadow: 0 8px 28px rgba(0,0,0,.12); }
+  .hp-panel[hidden] { display: none; }
+  .hp-panel label { display: flex; align-items: center; gap: 10px; padding: 7px 12px; font-size: 15px; cursor: pointer; border-radius: 10px; }
+  .hp-panel label:hover { background: rgba(0,0,0,.04); }
+  .hp-actions { display: flex; gap: 14px; padding: 8px 12px 4px; font-size: 13px; }
+  .hp-actions button { color: var(--muted); text-decoration: underline; }
+
   /* Halls */
   .halls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 36px; align-items: start; }
   .hall { background: var(--card); border-radius: 20px; padding: 24px 22px 12px; }
@@ -216,6 +227,11 @@
     <div id="hlRows"></div>
   </section>
 
+  <div class="hallpick" id="hallpick">
+    <button class="hp-btn" id="hpBtn" aria-expanded="false" aria-controls="hpPanel"></button>
+    <div class="hp-panel" id="hpPanel" role="group" aria-label="Dining halls" hidden></div>
+  </div>
+
   <div class="filters" id="filters" role="group" aria-label="Dietary filters"></div>
   <div class="nutrow" id="nutrow" role="group" aria-label="Nutrition estimates"></div>
 
@@ -229,6 +245,7 @@
 
 <script>
 const DATA = /*__DATA__*/null;
+const ALL_HALLS = DATA.halls;
 const HL = Object.fromEntries(DATA.highlights.map(h => [h.id, h]));
 
 const TZ = "America/Los_Angeles";
@@ -283,10 +300,37 @@ function loadNut() {
   return { on: false, cals: true, high: false };
 }
 function saveNut() { try { localStorage.setItem(NUT_KEY, JSON.stringify(state.nut)); } catch (e) {} }
+const HALL_KEY = "diningHalls.v1";
+const DEFAULT_HALLS = ["Arrillaga", "Wilbur", "Lakeside", "FlorenceMoore"];
+function loadHalls() {
+  const ids = ALL_HALLS.map(h => h.id);
+  try {
+    const v = JSON.parse(localStorage.getItem(HALL_KEY));
+    if (Array.isArray(v)) return new Set(v.filter(id => ids.includes(id)));
+  } catch (e) {}
+  return new Set(DEFAULT_HALLS.filter(id => ids.includes(id)));
+}
+function saveHalls() { try { localStorage.setItem(HALL_KEY, JSON.stringify([...state.halls])); } catch (e) {} }
+const applyHalls = () => { DATA.halls = ALL_HALLS.filter(h => state.halls.has(h.id)); };
 const picks = loadPicks();
 const state = { day: DATA.days[dayIdx], meal: null, filters: new Set(), open: new Set(), extras: new Set(),
-                selected: new Set(picks.ids), picker: !picks.saved, nut: loadNut() };
+                selected: new Set(picks.ids), halls: loadHalls(), picker: !picks.saved, nut: loadNut() };
+applyHalls();
 state.meal = defaultMeal(state.day, now.hour);
+
+function renderHallPick() {
+  const n = state.halls.size;
+  $("hpBtn").textContent = `Dining halls (${n} of ${ALL_HALLS.length}) ▾`;
+  $("hpPanel").innerHTML = ALL_HALLS.map(h =>
+    `<label><input type="checkbox" data-hall="${esc(h.id)}"${state.halls.has(h.id) ? " checked" : ""}> ${esc(h.name)}</label>`).join("")
+    + `<div class="hp-actions"><button type="button" id="hpAll">Select all</button><button type="button" id="hpNone">Clear</button></div>`;
+}
+
+function hallsChanged() {
+  saveHalls(); applyHalls();
+  if (!mealsFor(state.day).includes(state.meal)) state.meal = defaultMeal(state.day, now.hour);
+  renderHallPick(); renderAll();
+}
 
 function renderHeader() {
   const dt = parseDate(state.day.date);
@@ -600,6 +644,8 @@ function renderUpdated() {
 function renderAll() { renderHeader(); renderSummary(); renderDays(); renderMeals(); renderFilters(); renderNutRow(); renderHighlights(); renderHalls(); }
 
 document.addEventListener("change", e => {
+  const hb = e.target.closest("[data-hall]");
+  if (hb) { hb.checked ? state.halls.add(hb.dataset.hall) : state.halls.delete(hb.dataset.hall); return hallsChanged(); }
   const cb = e.target.closest(".pick input");
   if (!cb) return;
   cb.checked ? state.selected.add(cb.value) : state.selected.delete(cb.value);
@@ -608,6 +654,11 @@ document.addEventListener("change", e => {
 });
 
 document.addEventListener("click", e => {
+  const hp = $("hpPanel");
+  if (e.target.closest("#hpBtn")) { hp.hidden = !hp.hidden; $("hpBtn").setAttribute("aria-expanded", !hp.hidden); return; }
+  if (e.target.closest("#hpAll")) { ALL_HALLS.forEach(h => state.halls.add(h.id)); return hallsChanged(); }
+  if (e.target.closest("#hpNone")) { state.halls.clear(); return hallsChanged(); }
+  if (!e.target.closest("#hallpick")) { hp.hidden = true; $("hpBtn").setAttribute("aria-expanded", "false"); }
   const nb = e.target.closest("[data-n]");
   if (nb) {
     const k = nb.dataset.n;
@@ -651,6 +702,7 @@ document.addEventListener("click", e => {
   }
 });
 
+renderHallPick();
 renderPicker();
 renderToggle();
 renderAll();

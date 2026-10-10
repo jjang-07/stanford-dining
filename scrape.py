@@ -19,9 +19,14 @@ F = "ctl00$MainContent$"
 # (value used by the menu app, name shown on the page)
 HALLS = [
     ("Arrillaga", "Arrillaga"),
-    ("Wilbur", "Wilbur"),
-    ("Lakeside", "Lakeside"),
+    ("Branner", "Branner"),
+    ("EVGR", "EVGR"),
     ("FlorenceMoore", "Florence Moore"),
+    ("GerhardCasper", "Gerhard Casper"),
+    ("Lakeside", "Lakeside"),
+    ("Ricker", "Ricker"),
+    ("Stern", "Stern"),
+    ("Wilbur", "Wilbur"),
 ]
 MEALS = ["Breakfast", "Brunch", "Lunch", "Dinner"]
 PAUSE = 0.25  # seconds between requests
