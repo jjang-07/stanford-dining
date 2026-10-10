@@ -1,0 +1,12 @@
+
+# local tooling and build output
+__pycache__/
+menus.json
+site/
+.agents/
+.claude/
+.codex/
+.github/agents/
+.github/hooks/
+.github/skills/
+skills-lock.json
