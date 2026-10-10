@@ -16,4 +16,6 @@ html = (root / "template.html").read_text().replace("/*__DATA__*/null", payload)
 out = root / "site" / "index.html"
 out.parent.mkdir(exist_ok=True)
 out.write_text(html)
+for name in ("specials.html", "favicon.svg"):
+    (out.parent / name).write_text((root / name).read_text())
 print(f"Wrote {out} ({len(html) // 1024} KB)")

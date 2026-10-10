@@ -1,4 +1,4 @@
-# Dining brief
+# Stanford Dining
 
 A one-page daily menu for all nine Stanford halls. A dropdown on the page lets visitors choose which halls to show (default: Arrillaga, Wilbur, Lakeside, Florence Moore).
 A scheduled job pulls the menus from Stanford R&DE each morning and publishes a static page.

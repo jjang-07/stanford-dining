@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dining brief</title>
+<title>Stanford Dining</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
@@ -30,7 +31,9 @@
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   button:focus-visible { outline: 2px solid var(--cardinal); outline-offset: 3px; border-radius: 6px; }
 
-  .page { max-width: 1160px; margin: 0 auto; padding: 56px 28px 72px; }
+  .specials-link { position: absolute; top: 20px; right: 28px; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none; }
+  .specials-link:hover { border-color: var(--cardinal); color: var(--cardinal); }
+  .page { position: relative; max-width: 1160px; margin: 0 auto; padding: 56px 28px 72px; }
 
   /* Header */
   .kicker { color: var(--muted); font-size: 15px; margin: 0 0 10px; }
@@ -209,6 +212,7 @@
 </head>
 <body>
 <main class="page">
+  <a class="specials-link" href="specials.html">Dining Hall Specials</a>
   <p class="kicker" id="kicker"></p>
   <h1 id="title"></h1>
   <p class="summary" id="summary" aria-live="polite"></p>
